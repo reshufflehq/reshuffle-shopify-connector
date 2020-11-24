@@ -1,61 +1,111 @@
 import { Reshuffle, BaseConnector, EventConfiguration } from 'reshuffle-base-connector'
+import Shopify, { WebhookTopic } from 'shopify-api-node'
+import { Request, Response } from 'express'
 
-export interface _CONNECTOR_NAME_ConnectorConfigOptions {
-  var1: string
-  // ...
+const DEFAULT_WEBHOOK_PATH = '/reshuffle-shopify-connector/webhook'
+
+export interface ShopifyConnectorConfigOptions extends Shopify.IPrivateShopifyConfig {
+  baseURL?: string
+  webhookPath?: string
+  webhookName?: string
 }
 
-export interface _CONNECTOR_NAME_ConnectorEventOptions {
-  option1?: string
-  // ...
+export interface ShopifyConnectorEventOptions {
+  topic: WebhookTopic
 }
 
-export default class _CONNECTOR_NAME_Connector extends BaseConnector<
-  _CONNECTOR_NAME_ConnectorConfigOptions,
-  _CONNECTOR_NAME_ConnectorEventOptions
+function validateBaseURL(url?: string): string {
+  if (typeof url !== 'string') {
+    throw new Error(`Invalid url: ${url}`)
+  }
+  const match = url.match(/^(https:\/\/[\w-]+(\.[\w-]+)*(:\d{1,5})?)\/?$/)
+  if (!match) {
+    throw new Error(`Invalid url: ${url}`)
+  }
+  return match[1]
+}
+
+export default class ShopifyConnector extends BaseConnector<
+  ShopifyConnectorConfigOptions,
+  ShopifyConnectorEventOptions
 > {
-  // Your class variables
-  var1: string
+  _sdk: Shopify
 
-  constructor(app: Reshuffle, options?: _CONNECTOR_NAME_ConnectorConfigOptions, id?: string) {
+  constructor(app: Reshuffle, options: ShopifyConnectorConfigOptions, id?: string) {
+    const { baseURL, webhookPath, webhookName, ...shopifyOptions } = options
     super(app, options, id)
-    this.var1 = options?.var1 || 'initial value'
-    // ...
+    this._sdk = new Shopify(shopifyOptions)
   }
 
-  onStart(): void {
-    // If you need to do something specific on start, otherwise remove this function
+  async onStart(): Promise<void> {
+    const logger = this.app.getLogger()
+    const events = Object.values(this.eventConfigurations)
+    if (events.length) {
+      const url = validateBaseURL(this.configOptions?.baseURL)
+      const address = url + (this.configOptions?.webhookPath || DEFAULT_WEBHOOK_PATH)
+
+      const webhooks = await this._sdk.webhook.list()
+
+      for (const event of events) {
+        const {
+          options: { topic },
+        } = event
+        // Check existing webhook
+        const existingWebhook = webhooks.find(
+          (opts) => opts.address === address && opts.topic === topic,
+        )
+
+        const webhook = existingWebhook || (await this._sdk.webhook.create({ address, topic }))
+
+        if (webhook.created_at) {
+          logger.info(
+            `Reshuffle Shopify - webhook registered successfully (topic: ${webhook.topic}, address ${webhook.address})`,
+          )
+        } else {
+          logger.error(
+            `Reshuffle Shopify - webhook registration failure (topic: ${webhook.topic}, address: ${webhook.address})`,
+          )
+        }
+      }
+    }
   }
 
-  onStop(): void {
-    // If you need to do something specific on stop, otherwise remove this function
-  }
+  on(options: ShopifyConnectorEventOptions, handler: any, eventId: string): EventConfiguration {
+    const path = this.configOptions?.webhookPath || DEFAULT_WEBHOOK_PATH
 
-  // Your events
-  on(
-    options: _CONNECTOR_NAME_ConnectorEventOptions,
-    handler: any,
-    eventId: string,
-  ): EventConfiguration {
     if (!eventId) {
-      eventId = `_CONNECTOR_NAME_/${options.option1}/${this.id}`
+      eventId = `Shopify${path}/${options.topic}/${this.id}`
     }
     const event = new EventConfiguration(eventId, this, options)
     this.eventConfigurations[event.id] = event
 
     this.app.when(event, handler)
+    this.app.registerHTTPDelegate(path, this)
 
     return event
   }
 
-  // Your actions
-  action1(bar: string): void {
-    // Your implementation here
+  async handle(req: Request, res: Response): Promise<boolean> {
+    const topic = req.headers['x-shopify-topic']
+    const eventsUsingShopifyEvent = Object.values(this.eventConfigurations).filter(
+      ({ options }) => options.topic === topic,
+    )
+
+    for (const event of eventsUsingShopifyEvent) {
+      await this.app.handleEvent(event.id, {
+        ...event,
+        ...req.body,
+        topic,
+      })
+    }
+
+    return true
   }
 
-  action2(foo: string): void {
-    // Your implementation here
+  // https://www.npmjs.com/package/shopify-api-node#available-resources-and-methods
+  sdk(): Shopify {
+    return this._sdk
   }
 }
 
-export { _CONNECTOR_NAME_Connector }
+export { ShopifyConnector }
