@@ -29,7 +29,7 @@ export default class ShopifyConnector extends BaseConnector<
   ShopifyConnectorConfigOptions,
   ShopifyConnectorEventOptions
 > {
-  _sdk: Shopify
+  private readonly _sdk: Shopify
 
   constructor(app: Reshuffle, options: ShopifyConnectorConfigOptions, id?: string) {
     const { baseURL, webhookPath, webhookName, ...shopifyOptions } = options
@@ -52,7 +52,7 @@ export default class ShopifyConnector extends BaseConnector<
         } = event
         // Check existing webhook
         const existingWebhook = webhooks.find(
-          (opts) => opts.address === address && opts.topic === topic,
+          (hook) => hook.address === address && hook.topic === topic,
         )
 
         if (existingWebhook) {
