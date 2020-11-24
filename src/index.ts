@@ -55,16 +55,22 @@ export default class ShopifyConnector extends BaseConnector<
           (opts) => opts.address === address && opts.topic === topic,
         )
 
-        const webhook = existingWebhook || (await this._sdk.webhook.create({ address, topic }))
-
-        if (webhook.created_at) {
+        if (existingWebhook) {
           logger.info(
-            `Reshuffle Shopify - webhook registered successfully (topic: ${webhook.topic}, address ${webhook.address})`,
+              `Reshuffle Shopify - reusing existing webhook (topic: ${existingWebhook.topic}, address ${existingWebhook.address})`,
           )
         } else {
-          logger.error(
-            `Reshuffle Shopify - webhook registration failure (topic: ${webhook.topic}, address: ${webhook.address})`,
-          )
+          const webhook = await this._sdk.webhook.create({ address, topic })
+
+          if (webhook.created_at) {
+            logger.info(
+                `Reshuffle Shopify - webhook registered successfully (topic: ${webhook.topic}, address ${webhook.address})`,
+            )
+          } else {
+            logger.error(
+                `Reshuffle Shopify - webhook registration failure (topic: ${webhook.topic}, address: ${webhook.address})`,
+            )
+          }
         }
       }
     }
