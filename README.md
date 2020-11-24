@@ -8,9 +8,9 @@ This connector uses [Official Node Shopify Client](https://www.npmjs.com/package
 
 ### Reshuffle Shopify Connector
 
-This connector provides a connector for [Shopify](https://www.shopify.com/online).
+This package contains a Reshuffle connector for connecting to [Shopify](https://www.shopify.com/online).
 
-The following example listen to Shopify events:
+The following example listens to Shopify order fulfillment events:
 ```js
 const { Reshuffle } = require('reshuffle')
 const { ShopifyConnector } = require('reshuffle-shopify-connector')
@@ -29,14 +29,30 @@ connector.on({ topic: 'orders/fulfilled' }, (event, app) => {
 app.start()
 ```
 
-Create an API token from your Shopify Admin Page:
+### Table of Contents
+
+[Create Shopify API token](#apitoken)
+
+[Configuration Options](#configuration)
+
+#### Connector Events
+
+[Listening to Shopify events](#listen)
+
+#### Connector Actions
+[Examples using the SDK](#sdk)
+
+[SDK](#sdk) - Retrieve a full Shopify sdk object
+
+#### <a name="apitoken"></a>Create Shopify API token
+Create an API token on your Shopify Admin Page:
 
 1. Go to https://<your_shop_name>.myshopify.com/admin/apps/private
 2. Click `Create new private app`, 
 3. Provide a name and scopes (keeping in mind that permissions are very limited per default)
 4. Click Save, and you'll get api key and password
 
-#### Configuration Options:
+#### <a name="configuration"></a>Configuration Options
 
 Provide options as below for connecting to Shopify:
 ```typescript
@@ -69,7 +85,7 @@ interface IPrivateShopifyConfig {
 
 #### Connector events
 
-##### listening to Shopify events
+##### <a name="listen"></a>Listening to Shopify events
 
 To listen to events happening in Shopify, pass the topic as options to the `connector.on` function
 
@@ -163,7 +179,16 @@ connector.on({ topic: 'orders/create' }, async (event, app) => {
 All actions are provided via the sdk.
 // See full list of actions documentations in [Shopify Client Available Resources and Methods](https://www.npmjs.com/package/shopify-api-node#available-resources-and-methods)
 
-Few examples:
+##### <a name="sdk"></a>SDK
+
+Full access to the Node Shopify Client SDK
+
+```typescript
+const sdk = await connector.sdk()
+```
+
+
+##### <a name="examples"></a>Examples using the SDK
 
 - Get list of products (you can filter them by passing options to `list(options)`)
 ```typescript
@@ -181,12 +206,4 @@ console.log(orders)
 ```typescript
 const country = await connector.sdk().country.create({ code: 'FR', tax: 0.25 })
 console.log(country) // { id: 381258858693, name: 'France', tax: 0.25, code: 'FR', tax_name: 'FR TVA', provinces: [] }
-```
-
-##### sdk
-
-Full access to the Node Shopify Client SDK
-
-```typescript
-const sdk = await connector.sdk()
 ```
