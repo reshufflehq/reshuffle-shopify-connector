@@ -196,7 +196,7 @@ const products = await connector.sdk().product.list()
 console.log(products) // [{ id: 6095693840581, tite: 'Reshuffle cap', created_at: '2020-11-23T15:23:09+13:00', published_scope: 'web', admin_graphql_api_id: 'gid://shopify/Product/6095693840581', ... }]
 ```
 
-- Get list of issues for a board
+- Get list of orders
 ```typescript
 const orders = await connector.sdk().order.list({ limit: 5 })
 console.log(orders)
