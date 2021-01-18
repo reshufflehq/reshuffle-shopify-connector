@@ -8,7 +8,7 @@ This connector uses [Official Node Shopify Client](https://www.npmjs.com/package
 
 ### Reshuffle Shopify Connector
 
-This package contains a Reshuffle connector for connecting to [Shopify](https://www.shopify.com/online).
+This package contains a [Reshuffle](https://github.com/reshufflehq/reshuffle) connector for connecting to [Shopify](https://www.shopify.com/online).
 
 The following example listens to Shopify order fulfillment events:
 ```js
